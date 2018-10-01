@@ -7,33 +7,44 @@ import javax.net.ssl.SSLSocketFactory
 import kotlin.concurrent.thread
 
 class Main {
-    lateinit var socket: SSLSocket
-    lateinit var socketReader: Scanner
-    lateinit var socketWriter: PrintWriter
-    lateinit var consoleReader: Scanner
+
+    private lateinit var socket: SSLSocket
+    private lateinit var socketReader: Scanner
+    private lateinit var socketWriter: PrintWriter
+    private lateinit var consoleReader: Scanner
+
+    private val yandexPop = "pop.yandex.ru"
+    private val mailPop = "pop.mail.ru"
 
     fun start() {
+        consoleReader = Scanner(System.`in`)
+
+        println("Yandex or mail.ru?")
+        var popServer = mailPop
+        if (consoleReader.nextLine().toLowerCase().contains("yandex")) {
+            popServer = yandexPop
+        }
+
         val sslSocketFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
-        socket = sslSocketFactory.createSocket("pop.mail.ru", 995) as SSLSocket
+        socket = sslSocketFactory.createSocket(popServer, 995) as SSLSocket
         socket.startHandshake()
+
         socketReader = Scanner(socket.inputStream)
         socketWriter = PrintWriter(BufferedWriter(OutputStreamWriter(socket.outputStream)))
 
-        consoleReader = Scanner(System.`in`)
-
         thread {
             var msg = socketReader.nextLine()
+            var lowMsg = msg.toLowerCase()
             while (true) {
                 println(msg)
 
-                if (msg.contains("signing off") ||
-                        msg.contains("ERR Authentication failed")) {
-
+                if (lowMsg.matches(Regex("(.*signing off.*)|(.*err.*auth.*)|(.*idle for too long.*)"))) {
                     System.exit(0)
                 }
 
                 if (socketReader.hasNext()) {
                     msg = socketReader.nextLine()
+                    lowMsg = msg.toLowerCase()
                 }
             }
         }
@@ -63,7 +74,13 @@ class Main {
     }
 
     /*
+    pop.yandex.ru
+    pop.mail.ru
+
     USER <SP> <name> <CRLF>
+        name:
+            mail.ru - username with @ and domain
+            yandex.ru -
 
     PASS <SP> <passw> <CRLF>
 
@@ -73,7 +90,7 @@ class Main {
       +OK <n> <s>
           n - amount of emails, s - their size
 
-    IST [<SP> <mes>] <CRLF>
+    LIST [<SP> <mes>] <CRLF>
       -ERR no such message
 
       +OK scan listing follows

@@ -1,75 +1,88 @@
 import java.io.*
-import java.net.Socket
 import java.util.*
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
+import kotlin.concurrent.thread
+
+/*
+    smtp.mail.ru:465
+
+    "mail from: $fromWho"
+    "rcpt to: $toWho"
+    "data"
+    "From: $fromWho"
+    "To: $toWho"
+    "Subject: $subject"
+    $message
+    .
+    quit
+ */
 
 class MyMailer {
-    private lateinit var socket: Socket
-    private lateinit var bufferedReader: BufferedReader
-    private lateinit var bufferedWriter: BufferedWriter
 
-    @Throws(IOException::class)
-    fun sendEmail() {
+    private lateinit var socket: SSLSocket
+    private lateinit var socketReader: BufferedReader
+    private lateinit var socketWriter: PrintWriter
+    private lateinit var consoleReader: Scanner
 
-        val scanner = Scanner(System.`in`)
+    fun start() {
+
+        consoleReader = Scanner(System.`in`)
 
         print("SMTP server address: ")
-        val smtpServerAddress = scanner.nextLine()
+        val smtpServerAddress = consoleReader.nextLine()
+
+        print("SMTP server port: ")
+        val smtpServerPort = consoleReader.nextInt()
+        consoleReader.nextLine()
 
         print("Login: ")
-        val login = scanner.nextLine()
+        val login = consoleReader.nextLine()
 
         print("Password: ")
-        val password = scanner.nextLine()
+        val password = consoleReader.nextLine()
 
-        print("From: ")
-        val fromWho = scanner.nextLine()
+        val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
+        socket = factory.createSocket(smtpServerAddress, smtpServerPort) as SSLSocket
+        socket.startHandshake()
 
-        print("To: ")
-        val toWho = scanner.nextLine()
+        socketReader = BufferedReader(InputStreamReader(socket.inputStream))
+        socketWriter = PrintWriter(BufferedWriter(OutputStreamWriter(socket.outputStream)))
 
-        print("Subject: ")
-        val subject = scanner.nextLine()
+        thread {
+            var serverMsg = socketReader.readLine()
 
-        print("Message: ")
-        val msg = scanner.nextLine()
+            while (serverMsg != null) {
+                println(serverMsg)
 
-        socket = Socket(smtpServerAddress, 25)
-        socket.soTimeout = 30000
+                serverMsg = socketReader.readLine()
+            }
+        }
 
-        bufferedReader = socket.bufferedReader
-        bufferedWriter = socket.bufferedWriter
-
-        readMessage()
         sendMessage("HELO login")
 
         sendMessage("AUTH LOGIN")
         sendMessage(login.toBase64())
         sendMessage(password.toBase64())
 
-        sendMessage("mail from: $fromWho")
-        sendMessage("rcpt to: $toWho")
-
-        sendMessage("data")
-        sendMessage("From: $fromWho", false)
-        sendMessage("To: $toWho", false)
-        sendMessage("Subject: $subject", false)
-        sendMessage(msg, false)
-        sendMessage(".", false)
-        sendMessage("quit")
+        while (true) {
+            if (consoleReader.hasNext()) {
+                sendMessage(consoleReader.nextLine())
+            }
+        }
     }
 
-    @Throws(IOException::class)
-    internal fun sendMessage(message: String, readBack: Boolean = true) {
-        bufferedWriter.writeln(message)
-        println(message)
-
-        if (readBack) 
-            readMessage()
+    private fun sendMessage(msg: String) {
+        socketWriter.println(msg)
+        socketWriter.flush()
     }
 
-    @Throws(IOException::class)
-    internal fun readMessage() {
-        println(bufferedReader.readLine() + '\n')
-    }
 }
+
+fun main(args: Array<String>) {
+    val mailer = MyMailer()
+    mailer.start()
+}
+
+private fun String.toBase64(): String = Base64.getEncoder().encodeToString(this.toByteArray())
 

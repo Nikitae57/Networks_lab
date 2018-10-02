@@ -32,13 +32,29 @@ class Main {
         socketReader = Scanner(socket.inputStream)
         socketWriter = PrintWriter(BufferedWriter(OutputStreamWriter(socket.outputStream)))
 
+        print("Login: ")
+        val login = consoleReader.nextLine()
+
+        val console = System.console()
+        val password = String(console.readPassword("Password: "))
+
+        socketWriter.println("USER $login")
+        socketWriter.flush()
+
+        socketWriter.println("PASS $password")
+        socketWriter.flush()
+
         thread {
             var msg = socketReader.nextLine()
             var lowMsg = msg.toLowerCase()
             while (true) {
                 println(msg)
 
-                if (lowMsg.matches(Regex("(.*signing off.*)|(.*err.*auth.*)|(.*idle for too long.*)"))) {
+                if (lowMsg.matches(Regex(
+                                "(.*signing off.*)" +
+                                "|(.*err.*auth.*)" +
+                                "|(.*idle for too long.*)|(.*shutting down.*)"))) {
+
                     System.exit(0)
                 }
 

@@ -39,8 +39,8 @@ class MyMailer {
         print("Login: ")
         val login = consoleReader.nextLine()
 
-        print("Password: ")
-        val password = consoleReader.nextLine()
+        val console = System.console()
+        val password = String(console.readPassword("Password: "))
 
         val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
         socket = factory.createSocket(smtpServerAddress, smtpServerPort) as SSLSocket
@@ -77,11 +77,14 @@ class MyMailer {
         socketWriter.flush()
     }
 
-}
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val mailer = MyMailer()
+            mailer.start()
+        }
+    }
 
-fun main(args: Array<String>) {
-    val mailer = MyMailer()
-    mailer.start()
 }
 
 private fun String.toBase64(): String = Base64.getEncoder().encodeToString(this.toByteArray())

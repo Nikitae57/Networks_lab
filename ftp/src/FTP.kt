@@ -13,7 +13,7 @@ class FTP {
     private lateinit var controlSocketWriter: PrintWriter
 
     private lateinit var dataSocket: Socket
-    private lateinit var dataSocketReader: BufferedReader
+    private lateinit var dataSocketInputStream: InputStream
     private lateinit var dataSocketWriter: DataOutputStream
 
     private lateinit var consoleReader: Scanner
@@ -86,6 +86,8 @@ class FTP {
                         println("Can't find file")
                         stored = false
                         file = null
+
+                        continue@loop
                     }
 
                     stored = true
@@ -113,15 +115,15 @@ class FTP {
         val dataSocketPort = (ints[4] * 256) + ints[5]
 
         dataSocket = Socket(dataSocketAddress, dataSocketPort)
-        dataSocketReader = BufferedReader(InputStreamReader(dataSocket.getInputStream()))
+        dataSocketInputStream = dataSocket.getInputStream()
         dataSocketWriter = DataOutputStream(dataSocket.getOutputStream())
     }
 
     private fun getData() {
         if (retred) {
             while (!dataSocket.isClosed) {
-                file?.appendBytes(dataSocket.getInputStream().readAllBytes())
-                if (dataSocket.getInputStream().available() == 0) {
+                file?.appendBytes(dataSocketInputStream.readAllBytes())
+                if (dataSocketInputStream.available() == 0) {
                     break
                 }
             }
@@ -132,7 +134,7 @@ class FTP {
             return
         }
 
-        val fileContent = dataSocketReader.lines().collect(Collectors.joining("\n"))
+        val fileContent = dataSocketInputStream.bufferedReader().readText()
         println("___DATA___")
         println(fileContent)
     }

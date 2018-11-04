@@ -11,8 +11,7 @@ class Main {
         @JvmStatic
         fun main(args: Array<String>) {
             try {
-                val m = Main()
-                m.go()
+                Main().go()
             } catch (ioex: IOException) {
                 println(ioex.message)
                 exit(1)
@@ -55,9 +54,25 @@ class Main {
 
         val maskStr = ("255.".repeat(unitOctets)
                 + "${Integer.parseInt(finalOctetStr, 2)}."
-                + "0".repeat(3 - unitOctets)).trimEnd('.')
+                + "0.".repeat(3 - unitOctets)).trimEnd('.')
 
-        print(maskStr)
+        println("Mask: $maskStr")
+
+        val possibleAddress = IntArray(4) {0}
+        for (i in 0 until unitOctets) {
+            possibleAddress[i] = when (networkClass) {
+                "a" -> 127
+                "b" -> 191
+                "c" -> 192
+                else -> throw IOException("Invalid network class")
+            }
+        }
+
+        // maxPossibleHosts
+        for (i in 0 until 10) {
+            possibleAddress.increment()
+            possibleAddress.print()
+        }
     }
 
     private fun Scanner.ask(prompt: String): String {
@@ -72,5 +87,25 @@ class Main {
             sb.append("0")
         }
         return sb.toString()
+    }
+
+    fun IntArray.print() {
+        val str = StringBuilder()
+        this.forEach {
+            str.append("$it.")
+        }
+
+        println(str.toString().removeSuffix("."))
+    }
+}
+
+private fun IntArray.increment() {
+    for (i in lastIndex downTo 1) {
+        if (this[i] < 254) {
+            this[i]++
+            break
+        } else {
+            this[i] = 0
+        }
     }
 }

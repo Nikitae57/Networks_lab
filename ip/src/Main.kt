@@ -5,8 +5,6 @@ import java.util.*
 
 class Main {
 
-    private val BITS_FOR_ADDRESS = 32
-
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
@@ -24,7 +22,7 @@ class Main {
         val scanner = Scanner(System.`in`)
 
         val networkClass = scanner.ask("Enter network class (A, B, C):")
-        val mask = when (networkClass) {
+        val bitsForNetwork = when (networkClass) {
             "a" -> 8
             "b" -> 16
             "c" -> 24
@@ -38,9 +36,9 @@ class Main {
         while (1.shl(bitsForSubnetworks) < subNetworksNumber) {
             bitsForSubnetworks++
         }
+        val totalBits = bitsForNetwork + bitsForSubnetworks
 
-        val totalBits = mask + bitsForSubnetworks
-        val freeBits = BITS_FOR_ADDRESS - (totalBits)
+        val freeBits = 32 - (totalBits)
         val maxPossibleHosts = 1.shl(freeBits) - 2
 
         if (maxPossibleHosts < maxHostsNumber) {
@@ -48,64 +46,27 @@ class Main {
             exit(1)
         }
 
-        val unitOctets = totalBits / 8
-        val finalOctetOnes = totalBits % 8
-        val finalOctetStr = formatNumber(8, finalOctetOnes)
+        val maskBitSet = BitSet(32)
+        maskBitSet.set(0, totalBits)
+        println("Mask:\n" +
+                "${maskBitSet.toBinStr()}\n" +
+                "${maskBitSet.toDecStr()}\n")
 
-        val maskStr = ("255.".repeat(unitOctets)
-                + "${Integer.parseInt(finalOctetStr, 2)}."
-                + "0.".repeat(3 - unitOctets)).trimEnd('.')
+        val endIndex = bitsForNetwork + bitsForSubnetworks
+        val subnetworkAddrBitset = BitSet()
+        subnetworkAddrBitset.set(0, bitsForNetwork)
 
-        println("Mask: $maskStr")
-
-        val possibleAddress = IntArray(4) {0}
-        for (i in 0 until unitOctets) {
-            possibleAddress[i] = when (networkClass) {
-                "a" -> 127
-                "b" -> 191
-                "c" -> 192
-                else -> throw IOException("Invalid network class")
+        for (i in 0 until (1L.shl(bitsForSubnetworks))) {
+            var bitCount = 0
+            while (1.shl(bitCount) < i) {
+                bitCount++
             }
-        }
 
-        // maxPossibleHosts
-        for (i in 0 until 10) {
-            possibleAddress.increment()
-            possibleAddress.print()
-        }
-    }
-
-    private fun Scanner.ask(prompt: String): String {
-        println(prompt)
-        return nextLine().toLowerCase()
-    }
-
-    fun formatNumber(decimals: Int, numberOfOnes: Int): String {
-        val sb = StringBuilder(decimals)
-        sb.append("1".repeat(numberOfOnes))
-        while (sb.length < 8) {
-            sb.append("0")
-        }
-        return sb.toString()
-    }
-
-    fun IntArray.print() {
-        val str = StringBuilder()
-        this.forEach {
-            str.append("$it.")
-        }
-
-        println(str.toString().removeSuffix("."))
-    }
-}
-
-private fun IntArray.increment() {
-    for (i in lastIndex downTo 1) {
-        if (this[i] < 254) {
-            this[i]++
-            break
-        } else {
-            this[i] = 0
+            val bitset = BitSet().from(i, bitsForNetwork + bitsForSubnetworks - bitCount - 1)
+            println(bitset.toBinStr())
+//            subnetworkAddrBitset.set(bitsForNetwork, endIndex, bitset.get(bitsForNetwork, endIndex))
+//            println(subnetworkAddrBitset.toBinStr())
         }
     }
 }
+
